@@ -1,3 +1,4 @@
 Scholar_form/
 *.toml
 .vscode/
+.venv/

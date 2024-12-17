@@ -1,0 +1,123 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html lang="fr">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta charset="UTF-8">
+<title>Sustaining Sponsor Benefits</title>
+<body>
+<style>
+@font-face {
+            font-family: Roboto;
+            src: url(static/fonts/Roboto-Regular.ttf);
+        }
+
+        @font-face {
+            font-family: Roboto;
+            src: url(static/fonts/Roboto-Bold.ttf);
+            font-weight: bold;
+        }
+ 
+         body {
+             font-family: "Roboto", sans-serif;
+          }
+
+          @page regular_template {
+                size: letter portrait;
+               
+                @frame logo_area1 {             
+                    left: 44pt; width: 245pt; top: 30pt; height: 150pt;
+                }
+                
+                @frame logo_area2 {            
+                    left: 323pt; width: 245pt; top: 30pt; height: 150pt;
+                }
+                          
+                @frame top_area1 {          
+                    -xpdf-frame-border: 1;   
+                    left: 44pt; width: 245pt; top: 150pt; height: 70pt;
+                }
+                       
+                @frame top_area2 {  
+                    -xpdf-frame-border: 1;           
+                    left: 323pt; width: 245pt; top: 150pt; height: 70pt;
+                }         
+
+                @frame main_area1 { 
+                    -xpdf-frame-border: 1;            
+                    left: 44pt; width: 245pt; top: 220pt; height: 130pt;
+                    font-size: 6pt;
+                }
+                
+                @frame main_area2 { 
+                    -xpdf-frame-border: 1;            
+                    left: 323pt; width: 245pt; top: 220pt; height: 150pt;
+                    font-size: 6pt;
+                }
+
+                 @frame main_area3 { 
+                    -xpdf-frame-border: 1;            
+                    left: 44pt; width: 530pt; top: 370pt; height: 192pt;
+                    font-size: 6pt;
+                }
+                @frame main_area4 { 
+                    -xpdf-frame-border: 1;            
+                    left: 44pt; width: 245pt; top: 562pt; height: 160pt;
+                    font-size: 6pt;
+                }
+                @frame main_area5 { 
+                    -xpdf-frame-border: 1;            
+                    left: 323pt; width: 245pt; top: 562pt; height: 160pt;
+                    font-size: 6pt;
+                }
+                @frame footer_frame {           
+                    -pdf-frame-content: footer_content;
+                    left: 50pt; width: 512pt; top: 772pt; height: 20pt;
+                }
+         }
+</style>
+    <div class="container">
+        <p class="header" style="padding: 20px 0;justify-content: center;">
+            <img align="left" style="width: 150px;margin-right:10px;max-width:50%"  src="logo.jpg" alt="Sustaining Sponsor Benefits Logo">
+            
+        </p>
+        <h1 align="center" >Sustaining Sponsor Benefits</h1>
+        <h5 align="right" >Submission Date: {-1}</h1>
+        
+         </br> </br> 
+          </br>
+        <div class="content">
+        <div border="1"><div></br>
+            <p  ><strong>UID:</strong> {0}</p>
+            <p ><strong>Organization Name:</strong> {2}</p>
+            <p  ><strong>Your Name:</strong> {1}</p>
+            
+            <p><strong>Contact Name:</strong> {7}</p>
+               <p><strong>Email:</strong> {3}</p>
+            <p><strong>Phone Number:</strong> {4}</p>
+            <p><strong>Total Points:</strong> {5}</p>
+            <p><strong>Remaining Points:</strong> {6}</p>
+</div><div>
+            <h2>Contacts</h2>
+            <table style="font-size: 10px;"  width="100%" border="1" cellspacing="0" cellpadding="5">
+                <thead>
+                    <tr>
+                        <th>Event Name</th>
+                        <th>Sponsor</th>
+                        <th>Selection</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {table}
+                    
+                </tbody>
+            </table>
+            <div>
+         
+           
+        </div>
+
+ <div id="footer_content" style="text-align: center;">
+            <p>&copy; {45} West Chester Liberty Chamber Alliance. All Rights Reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

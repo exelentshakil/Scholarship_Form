@@ -9,8 +9,14 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from streamlit.elements import image
+from xhtml2pdf import pisa
+from email.mime.image import MIMEImage
+from email.mime.base import MIMEBase
+from email import encoders
+from xhtml2pdf.files import getFile, pisaFileObject
+import io
 
-pc=st.set_page_config(page_title="Sustaining Sponsorship Benefits",page_icon= ":clipboard:")#,page_icon= "logo.jpg")
+pc=st.set_page_config(page_title="Sustaining Sponsor Benefits",page_icon= ":clipboard:")#,page_icon= "logo.jpg")
 
 
 
@@ -49,27 +55,28 @@ st.markdown(hide_github_icon, unsafe_allow_html=True)
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_dict(service_account_info, scope)
 client = gspread.authorize(creds)
-sheet_id = "16Ln8V-XTaSKDm1ycu5CNUkki-x2STgVvPHxSnOPKOwM"  # Replace with your actual Google Sheet ID
+sheet_id = secret_config["sheet_id"]#"16Ln8V-XTaSKDm1ycu5CNUkki-x2STgVvPHxSnOPKOwM"  # Replace with your actual Google Sheet ID
 sheet = client.open_by_key(sheet_id)
 
 def send_email(sender_email, sender_password, recipient_email, subject, body):
     try:
-        # Create a MIME object
-        message = MIMEMultipart()
-        message['From'] = sender_email
-        message['To'] = recipient_email
-        message['Subject'] = subject
+        for re in recipient_email.split(','):
+            # Create a MIME object
+            message = MIMEMultipart()
+            message['From'] = sender_email
+            message['To'] = re
+            message['Subject'] = subject
 
-        # Attach the body to the message
-        message.attach(MIMEText(body, 'plain'))
+            # Attach the body to the message
+            message.attach(MIMEText(body, 'plain'))
 
-        # Establish a secure session with Gmail's outgoing SMTP server
-        with smtplib.SMTP('smtp.gmail.com', 587) as server:
-            server.starttls()  # Secure the connection
-            server.login(sender_email, sender_password)  # Log in with app password
-            text = message.as_string()
-            server.sendmail(sender_email, recipient_email, text)  # Send the email
-            print("Email sent successfully!")
+            # Establish a secure session with Gmail's outgoing SMTP server
+            with smtplib.SMTP('smtp.gmail.com', 587) as server:
+                server.starttls()  # Secure the connection
+                server.login(sender_email, sender_password)  # Log in with app password
+                text = message.as_string()
+                server.sendmail(sender_email, recipient_email, text)  # Send the email
+                print("Email sent successfully!")
     
     except Exception as e:
         print(f"Failed to send email: {e}")
@@ -144,7 +151,7 @@ def handle_month_selection(unique_key, max_months, available_months):
     selected_months = st.multiselect(
         f"Select the months you choose to sponsor for {ulabel}",
         available_months,
-        st.session_state[selected_months_key],
+        #st.session_state[selected_months_key],
         key=selected_months_key,
         max_selections=max_months
     )
@@ -173,7 +180,7 @@ def handle_month_selection2(unique_key,  available_months):
     selected_months = st.multiselect(
         f"Select the months you choose to sponsor for {ulabel}",
         available_months,
-        st.session_state[selected_months_key],
+        #st.session_state[selected_months_key],
         key=selected_months_key,
     #    max_selections=max_months
     )
@@ -188,7 +195,7 @@ def calculate_remaining_points():
             optionKey=key.replace('_',' - ')
             months_key = f"{key}_months"
             multiplier=1
-            if months_key in st.session_state:#options[optionKey]['extra']['Multiples']=='Yes' and 
+            if months_key in st.session_state and (options[optionKey]['extra']['PointsDeductionMultiple'] or '').lower()!='no':#options[optionKey]['extra']['Multiples']=='Yes' and 
                 multiplier=len(st.session_state[months_key])
 
             deducted_points += (options[optionKey]['points']*multiplier)
@@ -200,7 +207,7 @@ def calculate_remaining_points():
 
 # Streamlit form
 st.image("logo.jpg", width=200)
-st.title("Sustaining Sponsorship Benefits")
+st.title("Sustaining Sponsor Benefits")
 
 
 # Basic information inputs with clear labels
@@ -224,17 +231,23 @@ total_points = st.number_input(
     value=0,
     help="Please enter a value between 0 and 100."
 )
-# Initialize session state for total_points and remaining_points
-if 'total_points' not in st.session_state or st.session_state.total_points != total_points:
-    st.session_state.total_points = total_points
-    st.session_state.remaining_points = total_points
 
-# Initialize session state for selected options and months
-if 'selected_options' not in st.session_state:
-    st.session_state.selected_options = {}
-if 'selected_months' not in st.session_state:
-    st.session_state.selected_months = {}
+def init_session():
+    # Initialize session state for total_points and remaining_points
+    if 'total_points' not in st.session_state or st.session_state.total_points != total_points:
+        st.session_state.total_points = total_points
+        st.session_state.remaining_points = total_points
 
+    # Initialize session state for selected options and months
+    if 'selected_options' not in st.session_state:
+        st.session_state.selected_options = {}
+    if 'selected_months' not in st.session_state:
+        st.session_state.selected_months = {}
+
+    if 'Submited' not in st.session_state:
+        st.session_state.Submited = False
+    
+init_session()
 # **New:** Calculate remaining points before rendering options
 calculate_remaining_points()
 
@@ -329,8 +342,33 @@ if st.session_state.total_points > 0:
 def generate_random_uid():
     return "UID-" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
+def getEmail(submittedData,tmp):
+    tmp2=tmp.replace("{"+str(45)+"}",str(datetime.now().year))
+    template=''
+    for i,t,v in submittedData:
+        if i<=9:
+            tmp2 =tmp2.replace("{"+str(i)+"}",str(v))
+        else:
+            t1=' - '.join(t.split(' - ')[:-1])
+            t2=t.split(' - ')[-1]
+            isSelectedstyle = "style='background:#eeffcc;" if v.lower()!='no' else ''
+            template+="<tr "+isSelectedstyle+" ><td>"+t1+"</td><td>"+t2+"</td><td>"+v+"</td></tr>"
+    tmp2 =tmp2.replace("{table}",str(template))   
+    return tmp2
+pisaFileObject.getNamedFile = lambda self: self.uri
+
+if st.session_state.Submited:
+    st.success("Wait for Form submission!")
+
+
+col1, col2, col3 = st.columns([1,3,4])
+#if col1.button("PDF"):
+#    pdfbtn = """ <a onclick="window.open('Test.pdf')" href="javascript:void(0)">Printable Version</a>
+#    """
+#    col1.markdown(pdfbtn, unsafe_allow_html=True)
+
 # Submit button
-if st.button("Submit"):
+if col1.button("Submit",disabled=(st.session_state.Submited)):
     selected_options = [key.replace("_"," - ") for key, selected in st.session_state.selected_options.items() if selected]
     selected_options_full = [key for key, selected in st.session_state.selected_options.items() if selected]
     selected_uids = [options[option]['uid'] for option in selected_options]
@@ -363,43 +401,64 @@ if st.button("Submit"):
         "Selected Months": " | ".join([f"{key.split('_')[1]}: {months}" for key, months in selected_months_data.items()]),
         "Submission Date": submission_date
     }
+    warnings = []
+    for key,selected in st.session_state.selected_options.items():
+        mms = options[key.replace("_"," - ")]["max_month_selection"]
+        isMultiple= options[key.replace("_"," - ")]['extra']['PointsDeductionMultiple'].lower()!='no'
+        curSel  = len((st.session_state[key+'_months'] if (key+'_months' in st.session_state) else []))
+        if selected and ((curSel!=mms and not isMultiple) or (curSel<=0 and isMultiple)):
+            warnings.append(key)
+    #warnings = [key  ]#and len(st.session_state[key+'_months'])==0
+    reqfields = { "Organization Name":len(company)>0,"Your Name":len(contact_name)>0,"Contact Name":len(Contact_Name)>0, "Email":len(email)>0,"Phone Number":len(phone_number )>0,"Total points":st.session_state.total_points>0}
+    reqfieldserror = [f for f,fv in reqfields.items() if not fv]
 
-    # Store data in 'raw info' sheet
-    sheet.worksheet("raw info").append_row([
-        data["Name"], data["Company"], data["Email"], data["phoneNumber"], data["Total Points"],data["Contact Name"],
-        data["Remaining Points"], data["Selected Options"], data["UID"], submission_uid, data["Selected Months"], data["Submission Date"]
-    ])
+    if not(len(reqfieldserror)==0  and st.session_state.remaining_points>-1):
+        if len(reqfieldserror)>0:
+            st.warning("Form Not Submited: " +", ".join(reqfieldserror)+" are Required")        
+        elif st.session_state.remaining_points<0:
+            st.warning("Form Not Submited: Remaining points incorrect, please check your selection")
+    elif len(warnings)>0:
+        st.warning(', '.join([str(k.replace('_',' - ')) for k in warnings])+" field Not filled properly.")
+    
+    else:
+        with st.spinner('Submitting...'):
+            st.session_state.Submited =True
+        
+            # Store data in 'raw info' sheet
+            sheet.worksheet("raw info").append_row([
+                data["Name"], data["Company"], data["Email"], data["phoneNumber"], data["Total Points"],data["Contact Name"],
+                data["Remaining Points"], data["Selected Options"], data["UID"], submission_uid, data["Selected Months"], data["Submission Date"]
+            ])
 
-    # Store data in 'Submitted' sheet
-    submission_data = [
-        submission_uid, data["Name"], data["Company"], data["Email"], data["phoneNumber"],
-        data["Total Points"], data["Remaining Points"],data["Contact Name"],"","",#,data["Contact Company"],data["Contact Email"]
-    ]
+            # Store data in 'Submitted' sheet
+            submission_data = [
+                submission_uid, data["Name"], data["Company"], data["Email"], data["phoneNumber"],
+                data["Total Points"], data["Remaining Points"],data["Contact Name"],"","",#,data["Contact Company"],data["Contact Email"]
+            ]
 
-    # Dynamically add columns for each selected option with the formatted event and sponsorship details
-    for section, section_options in event_sections.items():
-        for option in section_options:
-            computed_column = f"{section} - {option}"
-            unique_key = f"{section}_{option}"
-            col_value = ""
-            if unique_key in selected_options_full:
-                col_value = "YES"
-                # Append selected months if applicable
-                selected_months = st.session_state.get(f"{unique_key}_months", [])
-                if selected_months:
-                    col_value += " (" + ", ".join(selected_months) + ")"
-            else:
-                col_value = "NO"
-            submission_data.append(col_value)
+            # Dynamically add columns for each selected option with the formatted event and sponsorship details
+            for section, section_options in event_sections.items():
+                for option in section_options:
+                    computed_column = f"{section} - {option}"
+                    unique_key = f"{section}_{option}"
+                    col_value = ""
+                    if unique_key in selected_options_full:
+                        col_value = "YES"
+                        # Append selected months if applicable
+                        selected_months = st.session_state.get(f"{unique_key}_months", [])
+                        if selected_months:
+                            col_value += " (" + ", ".join(selected_months) + ")"
+                    else:
+                        col_value = "NO"
+                    submission_data.append(col_value)
 
-    # Fetch email credentials from Streamlit secrets for security
-    # sender_email = st.secrets["email"]["sender"]
-    # app_password = st.secrets["email"]["app_password"]
-    sender_email = ""
-    app_password = ""
-    recipient_email = email
-    subject = "Form Submitted Successfully"
-    body = f"""
+            # Fetch email credentials from Streamlit secrets for security
+            # sender_email = st.secrets["email"]["sender"]
+            # app_password = st.secrets["email"]["app_password"]
+      
+            recipient_email = email
+            subject = "Form Submitted Successfully"
+            body = f"""
 UID: {submission_uid}
 Name: {contact_name}
 Company: {company}
@@ -416,20 +475,30 @@ Selected Months:
 Submission Date: {submission_date}
 """
 
+            send_email(secret_config["EmailSender"],secret_config["EmailPass"],email+","+secret_config["EmailRecieve"],subject,body)
+            sheet.worksheet("Submitted").append_row(submission_data)
+            columns = sheet.worksheet("Submitted").row_values(1)
+            datainfo=[(i,c,submission_data[i]) for i,c in enumerate(columns)]
+            # Update Max value in Config sheet based on selected UIDs
+            config_worksheet = sheet.worksheet("Config")
+            config_data = config_worksheet.get_all_records()
 
-    sheet.worksheet("Submitted").append_row(submission_data)
+            for i, entry in enumerate(config_data):
+                if entry['UID'] in selected_uids:
+                    try:
+                        if isinstance(entry['Max'], int):
+                            new_max = entry['Max'] - 1
+                            config_worksheet.update_cell(i + 2, config_worksheet.find('Max').col, new_max)
+                    except ValueError:
+                        pass
 
-    # Update Max value in Config sheet based on selected UIDs
-    config_worksheet = sheet.worksheet("Config")
-    config_data = config_worksheet.get_all_records()
 
-    for i, entry in enumerate(config_data):
-        if entry['UID'] in selected_uids:
-            try:
-                if isinstance(entry['Max'], int):
-                    new_max = entry['Max'] - 1
-                    config_worksheet.update_cell(i + 2, config_worksheet.find('Max').col, new_max)
-            except ValueError:
-                pass
-
-    st.success("Form submitted successfully!")
+        st.session_state.Submited =False
+        st.success("Form submitted successfully!")
+        pdfinfo = getEmail(datainfo, open("pdftemplate.tmp", "r").read().replace('{-1}',submission_date))
+        output = io.BytesIO()
+        pisa.CreatePDF(pdfinfo,debug=1,
+         # page data
+        dest=output, encoding='UTF-8'                                              # destination "file"
+        )
+        col2.download_button('Download PDF', output.getbuffer().tobytes(), file_name='Sustaining Sponsor Benefits.pdf', mime='application/pdf')
