@@ -15,6 +15,7 @@ from email.mime.base import MIMEBase
 from email import encoders
 from xhtml2pdf.files import getFile, pisaFileObject
 import io
+import os
 
 pc=st.set_page_config(page_title="Sustaining Sponsor Benefits",page_icon= ":clipboard:")#,page_icon= "logo.jpg")
 
@@ -58,7 +59,7 @@ client = gspread.authorize(creds)
 sheet_id = secret_config["sheet_id"]#"16Ln8V-XTaSKDm1ycu5CNUkki-x2STgVvPHxSnOPKOwM"  # Replace with your actual Google Sheet ID
 sheet = client.open_by_key(sheet_id)
 
-def send_email(sender_email, sender_password, recipient_email, subject, body):
+def send_email(sender_email, sender_password, recipient_email, subject, body,file):
     try:
         for re in recipient_email.split(','):
             # Create a MIME object
@@ -69,13 +70,20 @@ def send_email(sender_email, sender_password, recipient_email, subject, body):
 
             # Attach the body to the message
             message.attach(MIMEText(body, 'plain'))
+            part = MIMEBase("application", "octet-stream")
+            part.set_payload(file)
+            encoders.encode_base64(part)
+            part.add_header(
+                "Content-Disposition", 'attachment', filename=os.path.basename("Sustaining Sponsor Benefits.pdf")
+            )
+            message.attach(part)
 
             # Establish a secure session with Gmail's outgoing SMTP server
             with smtplib.SMTP('smtp.gmail.com', 587) as server:
                 server.starttls()  # Secure the connection
                 server.login(sender_email, sender_password)  # Log in with app password
                 text = message.as_string()
-                server.sendmail(sender_email, recipient_email, text)  # Send the email
+                server.sendmail(sender_email, re, text)  # Send the email
                 print("Email sent successfully!")
     
     except Exception as e:
@@ -406,7 +414,7 @@ if col1.button("Submit",disabled=(st.session_state.Submited)):
         mms = options[key.replace("_"," - ")]["max_month_selection"]
         isMultiple= options[key.replace("_"," - ")]['extra']['PointsDeductionMultiple'].lower()!='no'
         curSel  = len((st.session_state[key+'_months'] if (key+'_months' in st.session_state) else []))
-        if selected and ((curSel!=mms and not isMultiple) or (curSel<=0 and isMultiple)):
+        if selected and ((curSel!=mms and not isMultiple) or (curSel<=0 and isMultiple)) and mms>0:
             warnings.append(key)
     #warnings = [key  ]#and len(st.session_state[key+'_months'])==0
     reqfields = { "Organization Name":len(company)>0,"Your Name":len(contact_name)>0,"Contact Name":len(Contact_Name)>0, "Email":len(email)>0,"Phone Number":len(phone_number )>0,"Total points":st.session_state.total_points>0}
@@ -475,7 +483,7 @@ Selected Months:
 Submission Date: {submission_date}
 """
 
-            send_email(secret_config["EmailSender"],secret_config["EmailPass"],email+","+secret_config["EmailRecieve"],subject,body)
+
             sheet.worksheet("Submitted").append_row(submission_data)
             columns = sheet.worksheet("Submitted").row_values(1)
             datainfo=[(i,c,submission_data[i]) for i,c in enumerate(columns)]
@@ -491,14 +499,20 @@ Submission Date: {submission_date}
                             config_worksheet.update_cell(i + 2, config_worksheet.find('Max').col, new_max)
                     except ValueError:
                         pass
-
+            
+            pdfinfo = getEmail(datainfo, open("pdftemplate.tmp", "r").read().replace('{-1}',submission_date))
+            output = io.BytesIO()
+            pisa.CreatePDF(pdfinfo,debug=1,
+                     # page data
+                    dest=output, encoding='UTF-8'                                              # destination "file"
+                )
+            doc =output.getbuffer().tobytes()
+            send_email(secret_config["EmailSender"],secret_config["EmailPass"],email+","+secret_config["EmailRecieve"],subject,body,doc)
+            col2.download_button('Download PDF',doc , file_name='Sustaining Sponsor Benefits.pdf', mime='application/pdf')
 
         st.session_state.Submited =False
         st.success("Form submitted successfully!")
-        pdfinfo = getEmail(datainfo, open("pdftemplate.tmp", "r").read().replace('{-1}',submission_date))
-        output = io.BytesIO()
-        pisa.CreatePDF(pdfinfo,debug=1,
-         # page data
-        dest=output, encoding='UTF-8'                                              # destination "file"
-        )
-        col2.download_button('Download PDF', output.getbuffer().tobytes(), file_name='Sustaining Sponsor Benefits.pdf', mime='application/pdf')
+        
+        
+
+        
