@@ -12,6 +12,7 @@ from streamlit.elements import image
 from xhtml2pdf import pisa
 from email.mime.image import MIMEImage
 from email.mime.base import MIMEBase
+from email.utils import formataddr
 from email import encoders
 from xhtml2pdf.files import getFile, pisaFileObject
 import io
@@ -64,7 +65,7 @@ def send_email(sender_email, sender_password, recipient_email, subject, body,fil
         for re in recipient_email.split(','):
             # Create a MIME object
             message = MIMEMultipart()
-            message['From'] = sender_email
+            message['From'] = 'Laurie Moher <'+sender_email+'>'
             message['To'] = re
             message['Subject'] = subject
 
@@ -507,7 +508,7 @@ Submission Date: {submission_date}
                     dest=output, encoding='UTF-8'                                              # destination "file"
                 )
             doc =output.getbuffer().tobytes()
-            send_email(secret_config["EmailSender"],secret_config["EmailPass"],email+","+secret_config["EmailRecieve"],subject,body,doc)
+            send_email(secret_config["EmailSender"],secret_config["EmailPass"],secret_config["EmailRecieve"]+","+email,subject,body,doc)
             col2.download_button('Download PDF',doc , file_name='Sustaining Sponsor Benefits.pdf', mime='application/pdf')
 
         st.session_state.Submited =False
