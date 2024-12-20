@@ -58,15 +58,19 @@ hide_github_icon = """ <style>
 """
 st.markdown(hide_github_icon, unsafe_allow_html=True)
 
+if all( map(lambda l: l in list(st.session_state.keys()),['gdrivesetup']) ):
+    scope,gauth,client,drive,sheet_id,sheet = st.session_state['gdrivesetup']
+else:
+    # Google Sheets setup    
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    gauth = GoogleAuth()
+    gauth.credentials = ServiceAccountCredentials.from_json_keyfile_dict(service_account_info, scope)
+    client = gspread.authorize(gauth.credentials)
+    sheet_id = secret_config["sheet_id"]#"16Ln8V-XTaSKDm1ycu5CNUkki-x2STgVvPHxSnOPKOwM"  # Replace with your actual Google Sheet ID
+    sheet = client.open_by_key(sheet_id)
+    drive = GoogleDrive(gauth)
+    st.session_state['gdrivesetup'] = [scope,gauth,client,drive,sheet_id,sheet]
 
-# Google Sheets setup
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-gauth = GoogleAuth()
-gauth.credentials = ServiceAccountCredentials.from_json_keyfile_dict(service_account_info, scope)
-client = gspread.authorize(gauth.credentials)
-sheet_id = secret_config["sheet_id"]#"16Ln8V-XTaSKDm1ycu5CNUkki-x2STgVvPHxSnOPKOwM"  # Replace with your actual Google Sheet ID
-sheet = client.open_by_key(sheet_id)
-drive = GoogleDrive(gauth)
 def send_email(sender_email, sender_password, recipient_email, subject, body,file):
     try:
         for re in recipient_email.split(','):
