@@ -17,10 +17,15 @@ from email import encoders
 from xhtml2pdf.files import getFile, pisaFileObject
 import io
 import os
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
+from PIL import Image
 
 pc=st.set_page_config(page_title="Sustaining Sponsor Benefits",page_icon= ":clipboard:")#,page_icon= "logo.jpg")
 
 
+# Add current date and time to the data
+submission_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 # Load the TOML configuration from Streamlit secrets
 secret_config = st.secrets["google_sheets"]
@@ -40,6 +45,7 @@ try:
         "auth_provider_x509_cert_url": secret_config["auth_provider_x509_cert_url"],
         "client_x509_cert_url": secret_config["client_x509_cert_url"]
     }
+    UploadImagefolder =  secret_config["UploadImagefolder"]
 except KeyError as e:
     st.error(f"Missing key in TOML file: {e}")
     st.stop()
@@ -55,22 +61,37 @@ st.markdown(hide_github_icon, unsafe_allow_html=True)
 
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_dict(service_account_info, scope)
-client = gspread.authorize(creds)
+gauth = GoogleAuth()
+gauth.credentials = ServiceAccountCredentials.from_json_keyfile_dict(service_account_info, scope)
+client = gspread.authorize(gauth.credentials)
 sheet_id = secret_config["sheet_id"]#"16Ln8V-XTaSKDm1ycu5CNUkki-x2STgVvPHxSnOPKOwM"  # Replace with your actual Google Sheet ID
 sheet = client.open_by_key(sheet_id)
-
+drive = GoogleDrive(gauth)
 def send_email(sender_email, sender_password, recipient_email, subject, body,file):
     try:
         for re in recipient_email.split(','):
             # Create a MIME object
-            message = MIMEMultipart()
+            message = MIMEMultipart('alternative')
             message['From'] = 'Laurie Moher <'+sender_email+'>'
             message['To'] = re
             message['Subject'] = subject
 
+     
+            im = MIMEImage(open("logo.jpg", 'rb').read(),  name=os.path.basename("logo.jpg"))
+            im.add_header('Content-ID', '<logo.jpg>')
+            message.attach(im)
+          
+            uploadedsign = st.session_state['uploadedfile'] 
+            if uploadedsign:  
+                file6 = drive.CreateFile({'id': uploadedsign}) 
+                file6.GetContentFile('uploads/'+uploadedsign+'.jpg')
+                im2 = MIMEImage(open('uploads/'+uploadedsign+'.jpg', 'rb').read(), name=os.path.basename("uploadedfile.jpg"))
+                im2.add_header('Content-ID', '<uploadedfile.jpg>')
+                message.attach(im2)
+                os.remove('uploads/'+uploadedsign+'.jpg')
+
             # Attach the body to the message
-            message.attach(MIMEText(body, 'plain'))
+            message.attach(MIMEText(body, 'html'))
             part = MIMEBase("application", "octet-stream")
             part.set_payload(file)
             encoders.encode_base64(part)
@@ -98,6 +119,28 @@ def fetch_options(sheet, tab_name):
     except gspread.exceptions.WorksheetNotFound:
         st.error(f"Worksheet {tab_name} not found in Google Sheets.")
         st.stop()
+
+
+def getEmail(submittedData,tmp,isAll):
+    tmp2=tmp.replace("{"+str(45)+"}",str(datetime.now().year))
+    template=''
+    for i,t,v in submittedData:
+        if i<=9:
+            tmp2 =tmp2.replace("{"+str(i)+"}",str(v))
+        else:
+            t1=' - '.join(t.split(' - ')[:-1])
+            t2=t.split(' - ')[-1]
+            global options
+           
+            isSelectedstyle = "style='background:#eeffcc;'" if v.lower()!='no' else ''
+            if len(isSelectedstyle)>0 or isAll:
+                template+="<tr "+isSelectedstyle+" ><td>"+t1+"</td><td>"+t2+"</td><td>"+', '.join(options[t]['description'])+"</td><td>"+str(options[t]['points'])+"</td><td>"+str(v)+"</td></tr>"
+    tmp2 =tmp2.replace("{table}",str(template))   
+    return tmp2
+
+# Function to generate a random UID for each submission
+def generate_random_uid():
+    return "UID-" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
 options_data = fetch_options(sheet, "Config")
 sections_data = fetch_options(sheet, "Config")
@@ -218,9 +261,23 @@ def calculate_remaining_points():
 st.image("logo.jpg", width=200)
 st.title("Sustaining Sponsor Benefits")
 
+columns = sheet.worksheet("Submitted").row_values(1)
+datainfo=[(i,c,'') for i,c in enumerate(columns)]
 
+# Update Max value in Config sheet based on selected UIDs
+config_worksheet = sheet.worksheet("Config")
+config_data = config_worksheet.get_all_records()
+pdfinfoEmpty = getEmail(datainfo, open("pdftemplate.tmp", "r").read().replace('{-1}',submission_date),True)
+outputEmpty = io.BytesIO()
+pisa.CreatePDF(pdfinfoEmpty,debug=1,
+                     # page data
+                    dest=outputEmpty, encoding='UTF-8'                                              # destination "file"
+                )
+docEmpty =outputEmpty.getbuffer().tobytes()
+c1, c2 = st.columns([5,3])
+c2.download_button('Print Form',docEmpty , file_name='Sustaining Sponsor Benefits.pdf', mime='application/pdf')
 # Basic information inputs with clear labels
-company = st.text_input("Organization Name", help="Enter your organization's name.")
+company = c1.text_input("Organization Name", help="Enter your organization's name.")
 contact_name = st.text_input("Your Name", help="Who should be our regular contact when we need names for events, marketing materials, etc.")
 st.caption("Who should be our regular contact when we need names for events, marketing materials, etc.")
 
@@ -256,9 +313,15 @@ def init_session():
     if 'Submited' not in st.session_state:
         st.session_state.Submited = False
     
+    if 'uploadedfile' not in st.session_state:
+        st.session_state['uploadedfile'] =""
+        st.session_state['uploadedfiledetail'] ={ 'gid':'', 'gname':'','uname':''}
+    
 init_session()
 # **New:** Calculate remaining points before rendering options
 calculate_remaining_points()
+
+uploadedfile  = st.file_uploader("please upload Logo image", accept_multiple_files=False, type= ['png', 'jpg'] )
 
 # Displaying sections and options
 for section, section_options in event_sections.items():
@@ -347,23 +410,6 @@ if st.session_state.total_points > 0:
     st.sidebar.write(f"**Total Points Allotted:** {st.session_state.total_points}")
     st.sidebar.write(f"### Remaining Points: {st.session_state.remaining_points}")
 
-# Function to generate a random UID for each submission
-def generate_random_uid():
-    return "UID-" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-
-def getEmail(submittedData,tmp):
-    tmp2=tmp.replace("{"+str(45)+"}",str(datetime.now().year))
-    template=''
-    for i,t,v in submittedData:
-        if i<=9:
-            tmp2 =tmp2.replace("{"+str(i)+"}",str(v))
-        else:
-            t1=' - '.join(t.split(' - ')[:-1])
-            t2=t.split(' - ')[-1]
-            isSelectedstyle = "style='background:#eeffcc;" if v.lower()!='no' else ''
-            template+="<tr "+isSelectedstyle+" ><td>"+t1+"</td><td>"+t2+"</td><td>"+v+"</td></tr>"
-    tmp2 =tmp2.replace("{table}",str(template))   
-    return tmp2
 pisaFileObject.getNamedFile = lambda self: self.uri
 
 if st.session_state.Submited:
@@ -378,6 +424,30 @@ col1, col2, col3 = st.columns([1,3,4])
 
 # Submit button
 if col1.button("Submit",disabled=(st.session_state.Submited)):
+    if uploadedfile is not None and uploadedfile!=st.session_state['uploadedfiledetail']['uname']:
+        fname = uploadedfile.name+"-"+generate_random_uid()
+        bytes_data = uploadedfile.read()
+        gfile = drive.CreateFile({"parents": [{'id': UploadImagefolder}], "title": fname, 'mimeType':"image/jpeg"})
+        if uploadedfile.name.lower().endswith(".png"):
+            with io.BytesIO() as f:
+                Image.open(bytes_data, mode='r', formats=None).convert('RGB').save(f,format="JPEG")
+                with open('uploads/'+fname, "wb") as binary_file:
+                    binary_file.write(f.read())
+            gfile.SetContentFile('uploads/'+fname)
+        else:           
+            with open('uploads/'+fname, "wb") as binary_file:
+                binary_file.write(bytes_data)
+            gfile.SetContentFile('uploads/'+fname)    
+        try:
+            gfile.Upload()
+        finally:
+            gfile.content.close()
+        if gfile.uploaded:
+            st.session_state['uploadedfile'] = gfile['id']#{ 'gid':gfile['id'], 'gname':fname,'uname':uploadedfile.name}
+            st.session_state['uploadedfiledetail'] ={ 'gid':gfile['id'], 'gname':fname,'uname':uploadedfile.name}
+            os.remove('uploads/'+fname)
+            st.toast(f"Logo Upload Success.")
+
     selected_options = [key.replace("_"," - ") for key, selected in st.session_state.selected_options.items() if selected]
     selected_options_full = [key for key, selected in st.session_state.selected_options.items() if selected]
     selected_uids = [options[option]['uid'] for option in selected_options]
@@ -387,8 +457,6 @@ if col1.button("Submit",disabled=(st.session_state.Submited)):
         key: " - ".join(months) for key, months in st.session_state.items() if months and key.endswith("_months")
     }
 
-    # Add current date and time to the data
-    submission_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # Generate a random UID for the submission
     submission_uid = generate_random_uid()
@@ -436,13 +504,13 @@ if col1.button("Submit",disabled=(st.session_state.Submited)):
             # Store data in 'raw info' sheet
             sheet.worksheet("raw info").append_row([
                 data["Name"], data["Company"], data["Email"], data["phoneNumber"], data["Total Points"],data["Contact Name"],
-                data["Remaining Points"], data["Selected Options"], data["UID"], submission_uid, data["Selected Months"], data["Submission Date"]
+                data["Remaining Points"], data["Selected Options"], data["UID"], submission_uid, data["Selected Months"], data["Submission Date"],st.session_state['uploadedfile']
             ])
 
             # Store data in 'Submitted' sheet
             submission_data = [
                 submission_uid, data["Name"], data["Company"], data["Email"], data["phoneNumber"],
-                data["Total Points"], data["Remaining Points"],data["Contact Name"],"","",#,data["Contact Company"],data["Contact Email"]
+                data["Total Points"], data["Remaining Points"],data["Contact Name"],"",st.session_state['uploadedfile'],#,data["Contact Company"],data["Contact Email"]
             ]
 
             # Dynamically add columns for each selected option with the formatted event and sponsorship details
@@ -467,7 +535,8 @@ if col1.button("Submit",disabled=(st.session_state.Submited)):
       
             recipient_email = email
             subject = "Form Submitted Successfully"
-            body = f"""
+            
+            a=f"""
 UID: {submission_uid}
 Name: {contact_name}
 Company: {company}
@@ -501,13 +570,14 @@ Submission Date: {submission_date}
                     except ValueError:
                         pass
             
-            pdfinfo = getEmail(datainfo, open("pdftemplate.tmp", "r").read().replace('{-1}',submission_date))
+            pdfinfo = getEmail(datainfo, open("pdftemplate.tmp", "r").read().replace('{-1}',submission_date),False)
             output = io.BytesIO()
             pisa.CreatePDF(pdfinfo,debug=1,
                      # page data
                     dest=output, encoding='UTF-8'                                              # destination "file"
                 )
             doc =output.getbuffer().tobytes()
+            body = getEmail(datainfo, open("htmltemplate.tmp", "r").read().replace('{-1}',submission_date),False)
             send_email(secret_config["EmailSender"],secret_config["EmailPass"],secret_config["EmailRecieve"]+","+email,subject,body,doc)
             col2.download_button('Download PDF',doc , file_name='Sustaining Sponsor Benefits.pdf', mime='application/pdf')
 

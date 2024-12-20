@@ -96,12 +96,14 @@
             <p><strong>Total Points:</strong> {5}</p>
             <p><strong>Remaining Points:</strong> {6}</p>
 </div><div>
-            <h2>Contacts</h2>
+            <h2>Options</h2>
             <table style="font-size: 10px;"  width="100%" border="1" cellspacing="0" cellpadding="5">
                 <thead>
                     <tr>
                         <th>Event Name</th>
                         <th>Sponsor</th>
+                        <th>Description</th>
+                        <th>Points</th>
                         <th>Selection</th>
                     </tr>
                 </thead>
