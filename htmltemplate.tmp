@@ -29,8 +29,8 @@ color:black;
         .footer {
             text-align: center;
             padding: 10px 0;
-            background: #333;
-            color: #fff;
+            xbackground: #333;
+            xcolor: #fff;
         }
         table {
             width: 100%;
@@ -53,14 +53,28 @@ color:black;
     <div class="container">
         <div class="header" style="text-align: center;padding: 20px 0;">
             <img style="width: 150px;"  src="cid:logo.jpg" alt="Sustaining Sponsor Benefits Logo">
-            <h1>Sustaining Sponsor Benefits</h1>
+            <h1>{2}</h1>
+<h2 style="color:red;">{45} Sustaining Sponsor</h2><h2 style="color:red;">Confirmation Sheet</h2>
         </div>
            <div class="uploadedfile">
                 <img src="cid:uploadedfile.jpg" alt="uploadedfile">
             </div>
         <div class="content">
+<h3 style="color:red;">Sustaining Sponsor Benefits</h3>
+
           
-            <p  ><strong>UID:</strong> {0}</p>
+            <p>Your Organization will be recognized:</p>
+            <ul>
+              <li>On our website, <a href="https://www.thechamberalliance.com">TheChamberAlliance.com</a>, with your logo and link to your website </li>
+              <li>On our Sponsorship Wall, predominently located in The Chamber Alliance office lobby</li>
+              <li>Listed in WCLCA publications</li>
+              <li>At our SSP Recognition Luncheon on October 8, 2024</li>
+              <li>Logo Displayed digitally on informaton board in the Chamber lobby as well as luncheons</li>
+              <li>At all signature events and MANY MORE</li>
+            </ul></br>
+<h3 style="color:red;">{4} Selection Confirmation</h3>
+            {table}
+ <p  ><strong>UID:</strong> {0}</p>
             <p ><strong>Organization Name:</strong> {2}</p>
             <p  ><strong>Your Name:</strong> {1}</p>
             
@@ -70,25 +84,11 @@ color:black;
             <p><strong>Total Points:</strong> {5}</p>
             <p><strong>Remaining Points:</strong> {6}</p>
 
-            <h2>Options</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Event Name</th>
-                        <th>Sponsor</th>
-                        <th>Description</th>
-                        <th>Points</th>
-                        <th>Selection</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {table}
-                </tbody>
-            </table>
-           
+         
         </div>
         <div class="footer">
-            <p>&copy; {45} Sustaining Sponsor Benefits. All Rights Reserved.</p>
+<img style="width: 80px;"  src="cid:logo.jpg" alt="Sustaining Sponsor Benefits Logo">
+            <p>&copy; {45} All Rights Reserved. 8763 Union Centre Blvd,  Suite 400  ◆  West Chester, OH 45069. ◆ (513) 777-3600</p>
         </div>
     </div>
 </body>

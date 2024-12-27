@@ -57,9 +57,18 @@ hide_github_icon = """ <style>
  </style>
 """
 st.markdown(hide_github_icon, unsafe_allow_html=True)
+def fetch_options(sheet, tab_name):
+    try:
+        worksheet = sheet.worksheet(tab_name)
+        data = worksheet.get_all_records()
+        return data,worksheet
+    except gspread.exceptions.WorksheetNotFound:
+        st.error(f"Worksheet {tab_name} not found in Google Sheets.")
+        st.stop()
+
 
 if all( map(lambda l: l in list(st.session_state.keys()),['gdrivesetup']) ):
-    scope,gauth,client,drive,sheet_id,sheet = st.session_state['gdrivesetup']
+    scope,gauth,client,drive,sheet_id,sheet,options_data,sections_data,columns,worksheetSubmitted,worksheetConfig = st.session_state['gdrivesetup']
 else:
     # Google Sheets setup    
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -69,7 +78,11 @@ else:
     sheet_id = secret_config["sheet_id"]#"16Ln8V-XTaSKDm1ycu5CNUkki-x2STgVvPHxSnOPKOwM"  # Replace with your actual Google Sheet ID
     sheet = client.open_by_key(sheet_id)
     drive = GoogleDrive(gauth)
-    st.session_state['gdrivesetup'] = [scope,gauth,client,drive,sheet_id,sheet]
+    options_data,worksheetConfig = fetch_options(sheet, "Config")
+    sections_data,worksheetConfig = fetch_options(sheet, "Config")
+    worksheetSubmitted= sheet.worksheet("Submitted")
+    columns = sheet.worksheet("Submitted").row_values(1)
+    st.session_state['gdrivesetup'] = [scope,gauth,client,drive,sheet_id,sheet,options_data,sections_data,columns,worksheetSubmitted,worksheetConfig]
 
 def send_email(sender_email, sender_password, recipient_email, subject, body,file):
     try:
@@ -115,17 +128,8 @@ def send_email(sender_email, sender_password, recipient_email, subject, body,fil
     except Exception as e:
         print(f"Failed to send email: {e}")
 
-def fetch_options(sheet, tab_name):
-    try:
-        worksheet = sheet.worksheet(tab_name)
-        data = worksheet.get_all_records()
-        return data
-    except gspread.exceptions.WorksheetNotFound:
-        st.error(f"Worksheet {tab_name} not found in Google Sheets.")
-        st.stop()
 
-
-def getEmail(submittedData,tmp,isAll):
+def getEmail(submittedData,tmp,isAll,isPdf):
     tmp2=tmp.replace("{"+str(45)+"}",str(datetime.now().year))
     template=''
     for i,t,v in submittedData:
@@ -138,7 +142,11 @@ def getEmail(submittedData,tmp,isAll):
            
             isSelectedstyle = "style='background:#eeffcc;'" if v.lower()!='no' else ''
             if len(isSelectedstyle)>0 or isAll:
-                template+="<tr "+isSelectedstyle+" ><td>"+t1+"</td><td>"+t2+"</td><td>"+', '.join(options[t]['description'])+"</td><td>"+str(options[t]['points'])+"</td><td>"+str(v)+"</td></tr>"
+                if isAll or isPdf:
+                    template+="<tr "+isSelectedstyle+" ><td>"+t1+"</td><td>"+t2+"</td><td>"+', '.join(options[t]['description'])+"</td><td>"+str(options[t]['points'])+"</td><td>"+str(v)+"</td></tr>"
+                else:
+                    template+=f'<p  ><strong style="color:red;">{t1}: - <span style="color:black;"> {t2}</span></strong><br /> '+(', '.join(options[t]['description']))+f' '+str(options[t]['points'])+'/Points</p></br>'
+                
     tmp2 =tmp2.replace("{table}",str(template))   
     return tmp2
 
@@ -146,8 +154,7 @@ def getEmail(submittedData,tmp,isAll):
 def generate_random_uid():
     return "UID-" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
-options_data = fetch_options(sheet, "Config")
-sections_data = fetch_options(sheet, "Config")
+
 
 if not options_data or not sections_data:
     st.error("Unable to fetch data from Google Sheets.")
@@ -265,13 +272,13 @@ def calculate_remaining_points():
 st.image("logo.jpg", width=200)
 st.title("Sustaining Sponsor Benefits")
 
-columns = sheet.worksheet("Submitted").row_values(1)
+
 datainfo=[(i,c,'') for i,c in enumerate(columns)]
 
 # Update Max value in Config sheet based on selected UIDs
-config_worksheet = sheet.worksheet("Config")
-config_data = config_worksheet.get_all_records()
-pdfinfoEmpty = getEmail(datainfo, open("pdftemplate.tmp", "r").read().replace('{-1}',submission_date),True)
+
+config_data =     sections_data
+pdfinfoEmpty = getEmail(datainfo, open("pdftemplate.tmp", "r").read().replace('{-1}',submission_date),True,True)
 outputEmpty = io.BytesIO()
 pisa.CreatePDF(pdfinfoEmpty,debug=1,
                      # page data
@@ -558,30 +565,29 @@ Submission Date: {submission_date}
 """
 
 
-            sheet.worksheet("Submitted").append_row(submission_data)
-            columns = sheet.worksheet("Submitted").row_values(1)
+            worksheetSubmitted.append_row(submission_data)
+            
             datainfo=[(i,c,submission_data[i]) for i,c in enumerate(columns)]
             # Update Max value in Config sheet based on selected UIDs
-            config_worksheet = sheet.worksheet("Config")
-            config_data = config_worksheet.get_all_records()
+  
 
-            for i, entry in enumerate(config_data):
+            for i, entry in enumerate(sections_data):
                 if entry['UID'] in selected_uids:
                     try:
                         if isinstance(entry['Max'], int):
                             new_max = entry['Max'] - 1
-                            config_worksheet.update_cell(i + 2, config_worksheet.find('Max').col, new_max)
+                            worksheetConfig.update_cell(i + 2, worksheetConfig.find('Max').col, new_max)
                     except ValueError:
                         pass
             
-            pdfinfo = getEmail(datainfo, open("pdftemplate.tmp", "r").read().replace('{-1}',submission_date),False)
+            pdfinfo = getEmail(datainfo, open("pdftemplate.tmp", "r").read().replace('{-1}',submission_date),False,True)
             output = io.BytesIO()
             pisa.CreatePDF(pdfinfo,debug=1,
                      # page data
                     dest=output, encoding='UTF-8'                                              # destination "file"
                 )
             doc =output.getbuffer().tobytes()
-            body = getEmail(datainfo, open("htmltemplate.tmp", "r").read().replace('{-1}',submission_date),False)
+            body = getEmail(datainfo, open("htmltemplate.tmp", "r").read().replace('{-1}',submission_date),False,False)
             send_email(secret_config["EmailSender"],secret_config["EmailPass"],secret_config["EmailRecieve"]+","+email,subject,body,doc)
             col2.download_button('Download PDF',doc , file_name='Sustaining Sponsor Benefits.pdf', mime='application/pdf')
 
