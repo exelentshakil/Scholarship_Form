@@ -1,0 +1,6 @@
+GETJENSCREENCELL
+
+
+=IFERROR(
+
+CONCATENATE(unique(QUERY(TimComputed!$A$1:$O, "select C  where G='"&cell&"' and A='"&cell2&"' "))),"")
