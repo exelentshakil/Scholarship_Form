@@ -52,7 +52,7 @@ color:black;
 <body>
     <div class="container">
         <div class="header" style="text-align: center;padding: 20px 0;">
-            <img style="width: 150px;"  src="cid:logo.jpg" alt="Sustaining Sponsor Benefits Logo">
+            <img style="width: 120px;"  src="cid:logo.jpg" alt="Sustaining Sponsor Benefits Logo">
             <h1>{2}</h1>
 <h2 style="color:red;">{45} Sustaining Sponsor</h2><h2 style="color:red;">Confirmation Sheet</h2>
         </div>
@@ -87,7 +87,6 @@ color:black;
          
         </div>
         <div class="footer">
-<img style="width: 80px;"  src="cid:logo.jpg" alt="Sustaining Sponsor Benefits Logo">
             <p>&copy; {45} All Rights Reserved. 8763 Union Centre Blvd,  Suite 400  ◆  West Chester, OH 45069. ◆ (513) 777-3600</p>
         </div>
     </div>

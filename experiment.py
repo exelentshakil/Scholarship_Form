@@ -87,6 +87,8 @@ else:
 def send_email(sender_email, sender_password, recipient_email, subject, body,file):
     try:
         for re in recipient_email.split(','):
+            if len(re)==0:
+                continue
             # Create a MIME object
             message = MIMEMultipart('alternative')
             message['From'] = 'Laurie Moher <'+sender_email+'>'
@@ -143,7 +145,7 @@ def getEmail(submittedData,tmp,isAll,isPdf):
             isSelectedstyle = "style='background:#eeffcc;'" if v.lower()!='no' else ''
             if len(isSelectedstyle)>0 or isAll:
                 if isAll or isPdf:
-                    template+="<tr "+isSelectedstyle+" ><td>"+t1+"</td><td>"+t2+"</td><td>"+', '.join(options[t]['description'])+"</td><td>"+str(options[t]['points'])+"</td><td>"+str(v)+"</td></tr>"
+                    template+="<tr "+isSelectedstyle+" ><td>"+t1+"</td><td>"+t2+"</td><td>"+', '.join(options[t]['description'])+"</td><td>"+str(options[t]['points'])+"</td><td>"+str(options[t]['max'] or '')+"</td><td>"+str(v)+"</td></tr>"
                 else:
                     template+=f'<p  ><strong style="color:red;">{t1}: - <span style="color:black;"> {t2}</span></strong><br /> '+(', '.join(options[t]['description']))+f' '+str(options[t]['points'])+'/Points</p></br>'
                 
@@ -273,8 +275,10 @@ st.image("logo.jpg", width=200)
 st.title("Sustaining Sponsor Benefits")
 
 
-datainfo=[(i,c,'') for i,c in enumerate(columns)]
-
+#datainfo=[(i,c,st.session_state['temp_newpdf_data'][i] if 'temp_newpdf_data' in st.session_state else '') for i,c in enumerate(columns)]
+#st.session_state.selected_options["checkboxlabels"][i]
+#datainfo=[(i,c,st.session_state['temp_newpdf_data'][i] if 'temp_newpdf_data' in st.session_state and i<len(st.session_state['temp_newpdf_data']) else '' ) for i,c in enumerate(columns)]
+datainfo=[(i,c,str(st.session_state['temp_newpdf_data'][i]) if 'temp_newpdf_data' in st.session_state and i<len(st.session_state['temp_newpdf_data']) else ''  ) for i,c in enumerate(columns)]#,options[c] if c in options else None
 # Update Max value in Config sheet based on selected UIDs
 
 config_data =     sections_data
@@ -289,8 +293,8 @@ c1, c2 = st.columns([5,3])
 c2.download_button('Print Form',docEmpty , file_name='Sustaining Sponsor Benefits.pdf', mime='application/pdf')
 # Basic information inputs with clear labels
 company = c1.text_input("Organization Name", help="Enter your organization's name.")
-contact_name = st.text_input("Your Name", help="Who should be our regular contact when we need names for events, marketing materials, etc.")
-st.caption("Who should be our regular contact when we need names for events, marketing materials, etc.")
+contact_name = st.text_input('Your Name :grey[(Who should be our regular contact when we need names for events, marketing materials, etc.)]')
+#st.caption("Who should be our regular contact when we need names for events, marketing materials, etc.")
 
 line_seperator=st.divider()
 Contact_Name=st.text_input("Contact Name")
@@ -327,6 +331,9 @@ def init_session():
     if 'uploadedfile' not in st.session_state:
         st.session_state['uploadedfile'] =""
         st.session_state['uploadedfiledetail'] ={ 'gid':'', 'gname':'','uname':''}
+    
+    #if 'checkboxlabels' not in st.session_state:
+    #    st.session_state.selected_options["checkboxlabels"]={}
     
 init_session()
 # **New:** Calculate remaining points before rendering options
@@ -387,6 +394,7 @@ for section, section_options in event_sections.items():
                 key=unique_key,
                 disabled=disabled
             )
+            #st.session_state.selected_options["checkboxlabels"][unique_key]=checkbox_label
 
             # Update session state based on the checkbox selection
             if selected != st.session_state.selected_options[unique_key]:
@@ -432,7 +440,7 @@ col1, col2, col3 = st.columns([1,3,4])
 #    pdfbtn = """ <a onclick="window.open('Test.pdf')" href="javascript:void(0)">Printable Version</a>
 #    """
 #    col1.markdown(pdfbtn, unsafe_allow_html=True)
-
+st.session_state['temp_newpdf_data'] =['', contact_name, company, email, phone_number,st.session_state.total_points, st.session_state.remaining_points,Contact_Name,"",'']
 # Submit button
 if col1.button("Submit",disabled=(st.session_state.Submited)):
     if uploadedfile is not None and uploadedfile!=st.session_state['uploadedfiledetail']['uname']:
@@ -441,7 +449,8 @@ if col1.button("Submit",disabled=(st.session_state.Submited)):
         gfile = drive.CreateFile({"parents": [{'id': UploadImagefolder}], "title": fname, 'mimeType':"image/jpeg"})
         if uploadedfile.name.lower().endswith(".png"):
             with io.BytesIO() as f:
-                Image.open(bytes_data, mode='r', formats=None).convert('RGB').save(f,format="JPEG")
+
+                Image.open(io.BytesIO(bytes_data), mode='r', formats=None).convert('RGB').save(f,format="JPEG")
                 with open('uploads/'+fname, "wb") as binary_file:
                     binary_file.write(f.read())
             gfile.SetContentFile('uploads/'+fname)

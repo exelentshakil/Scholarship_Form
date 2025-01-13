@@ -104,6 +104,7 @@
                         <th>Sponsor</th>
                         <th>Description</th>
                         <th>Points</th>
+                        <th>Remaining</th>
                         <th>Selection</th>
                     </tr>
                 </thead>
