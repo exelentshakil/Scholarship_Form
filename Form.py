@@ -5,7 +5,12 @@ import pandas as pd
 
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name("m2.json", scope)
+
+google_service_account_info = st.secrets['google_service_account']
+creds = ServiceAccountCredentials.from_json_keyfile_dict(google_service_account_info, scope)
+
+# creds = ServiceAccountCredentials.from_json_keyfile_name("m2.json", scope)
+
 client = gspread.authorize(creds)
 sheet = client.open_by_key("16Ln8V-XTaSKDm1ycu5CNUkki-x2STgVvPHxSnOPKOwM")
 
