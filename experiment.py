@@ -444,7 +444,7 @@ st.session_state['temp_newpdf_data'] =['', contact_name, company, email, phone_n
 # Submit button
 if col1.button("Submit",disabled=(st.session_state.Submited)):
     if uploadedfile is not None and uploadedfile!=st.session_state['uploadedfiledetail']['uname']:
-        fname = uploadedfile.name+"-"+generate_random_uid()
+        fname = generate_random_uid()+"-"+uploadedfile.name
         bytes_data = uploadedfile.read()
         gfile = drive.CreateFile({"parents": [{'id': UploadImagefolder}], "title": fname, 'mimeType':"image/jpeg"})
         if uploadedfile.name.lower().endswith(".png"):
