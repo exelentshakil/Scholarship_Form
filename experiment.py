@@ -24,16 +24,17 @@ import time
 
 pc=st.set_page_config(page_title="Sustaining Sponsor Benefits",page_icon= ":clipboard:")#,page_icon= "logo.jpg")
 
-#----------------------Hide Streamlit footer----------------------------
-hide_st_style = “”"
-
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-header {visibility: hidden;}
-
-“”"
+# ---------------------- Hide Streamlit footer ----------------------------
+hide_st_style = """
+<style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    .st-emotion-cache-1gulkj5 {display: none !important;} /* Hides 'Hosted with Streamlit' */
+</style>
+"""
 st.markdown(hide_st_style, unsafe_allow_html=True)
-#--------------------------------------------------------------------
+# --------------------------------------------------------------------
 
 # Add current date and time to the data
 submission_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
