@@ -29,8 +29,6 @@ hide_st_style = """
 <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {visibility: hidden;}
-    .st-emotion-cache-1gulkj5 {display: none !important;} /* Hides 'Hosted with Streamlit' */
 </style>
 """
 st.markdown(hide_st_style, unsafe_allow_html=True)
