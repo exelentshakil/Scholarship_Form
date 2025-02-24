@@ -25,11 +25,11 @@ import time
 pc=st.set_page_config(page_title="Sustaining Sponsor Benefits",page_icon= ":clipboard:")#,page_icon= "logo.jpg")
 
 # ---------------------- Hide Streamlit footer ----------------------------
-    hide_footer_style = """
-    <style>
-    .reportview-container .main footer {visibility: hidden;}    
-    """
-    st.markdown(hide_footer_style, unsafe_allow_html=True)------------------
+hide_footer_style = """
+<style>
+.reportview-container .main footer {visibility: hidden;}    
+"""
+st.markdown(hide_footer_style, unsafe_allow_html=True)
 
 # Add current date and time to the data
 submission_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
