@@ -67,22 +67,28 @@ def fetch_options(sheet, tab_name):
         st.stop()
 
 
-if all( map(lambda l: l in list(st.session_state.keys()),['gdrivesetup']) ):
-    scope,gauth,client,drive,sheet_id,sheet,options_data,sections_data,columns,worksheetSubmitted,worksheetConfig = st.session_state['gdrivesetup']
-else:
-    # Google Sheets setup    
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    gauth = GoogleAuth()
-    gauth.credentials = ServiceAccountCredentials.from_json_keyfile_dict(service_account_info, scope)
-    client = gspread.authorize(gauth.credentials)
-    sheet_id = secret_config["sheet_id"]#"16Ln8V-XTaSKDm1ycu5CNUkki-x2STgVvPHxSnOPKOwM"  # Replace with your actual Google Sheet ID
-    sheet = client.open_by_key(sheet_id)
-    drive = GoogleDrive(gauth)
-    options_data,worksheetConfig = fetch_options(sheet, "Config")
-    sections_data,worksheetConfig = fetch_options(sheet, "Config")
-    worksheetSubmitted= sheet.worksheet("Submitted")
-    columns = sheet.worksheet("Submitted").row_values(1)
-    st.session_state['gdrivesetup'] = [scope,gauth,client,drive,sheet_id,sheet,options_data,sections_data,columns,worksheetSubmitted,worksheetConfig]
+with st.spinner("Loading... Please wait ⏳"):
+    if all(map(lambda l: l in list(st.session_state.keys()), ['gdrivesetup'])):
+        scope, gauth, client, drive, sheet_id, sheet, options_data, sections_data, columns, worksheetSubmitted, worksheetConfig = st.session_state['gdrivesetup']
+    else:
+        # Google Sheets setup inside spinner
+        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        gauth = GoogleAuth()
+        gauth.credentials = ServiceAccountCredentials.from_json_keyfile_dict(service_account_info, scope)
+        client = gspread.authorize(gauth.credentials)
+        sheet_id = secret_config["sheet_id"]
+        sheet = client.open_by_key(sheet_id)
+        drive = GoogleDrive(gauth)
+        
+        options_data, worksheetConfig = fetch_options(sheet, "Config")
+        sections_data, worksheetConfig = fetch_options(sheet, "Config")
+        worksheetSubmitted = sheet.worksheet("Submitted")
+        columns = sheet.worksheet("Submitted").row_values(1)
+
+        # Cache setup in session state
+        st.session_state['gdrivesetup'] = [scope, gauth, client, drive, sheet_id, sheet, options_data, sections_data, columns, worksheetSubmitted, worksheetConfig]
+
+st.success("Page loaded successfully! 🎉")
 
 def send_email(sender_email, sender_password, recipient_email, subject, body,file):
     try:
@@ -95,14 +101,14 @@ def send_email(sender_email, sender_password, recipient_email, subject, body,fil
             message['To'] = re
             message['Subject'] = subject
 
-     
+
             im = MIMEImage(open("logo.jpg", 'rb').read(),  name=os.path.basename("logo.jpg"))
             im.add_header('Content-ID', '<logo.jpg>')
             message.attach(im)
-          
-            uploadedsign = st.session_state['uploadedfile'] 
-            if uploadedsign:  
-                file6 = drive.CreateFile({'id': uploadedsign}) 
+
+            uploadedsign = st.session_state['uploadedfile']
+            if uploadedsign:
+                file6 = drive.CreateFile({'id': uploadedsign})
                 file6.GetContentFile('uploads/'+uploadedsign+'.jpg')
                 im2 = MIMEImage(open('uploads/'+uploadedsign+'.jpg', 'rb').read(), name=os.path.basename("uploadedfile.jpg"))
                 im2.add_header('Content-ID', '<uploadedfile.jpg>')
@@ -126,7 +132,7 @@ def send_email(sender_email, sender_password, recipient_email, subject, body,fil
                 text = message.as_string()
                 server.sendmail(sender_email, re, text)  # Send the email
                 print("Email sent successfully!")
-    
+
     except Exception as e:
         print(f"Failed to send email: {e}")
 
@@ -141,15 +147,15 @@ def getEmail(submittedData,tmp,isAll,isPdf):
             t1=' - '.join(t.split(' - ')[:-1])
             t2=t.split(' - ')[-1]
             global options
-           
+
             isSelectedstyle = "style='background:#eeffcc;'" if v.lower()!='no' else ''
             if len(isSelectedstyle)>0 or isAll:
                 if isAll or isPdf:
                     template+="<tr "+isSelectedstyle+" ><td>"+t1+"</td><td>"+t2+"</td><td>"+', '.join(options[t]['description'])+"</td><td>"+str(options[t]['points'])+"</td><td>"+str(options[t]['max'] or '')+"</td><td>"+str(v)+"</td></tr>"
                 else:
                     template+=f'<p  ><strong style="color:red;">{t1}: - <span style="color:black;"> {t2}</span></strong><br /> '+(', '.join(options[t]['description']))+f' '+str(options[t]['points'])+'/Points</p></br>'
-                
-    tmp2 =tmp2.replace("{table}",str(template))   
+
+    tmp2 =tmp2.replace("{table}",str(template))
     return tmp2
 
 # Function to generate a random UID for each submission
@@ -184,7 +190,7 @@ for entry in options_data:
         max_month_selection = int(entry.get('Max Month Selection', 0))
     except ValueError:
         max_month_selection = 0
-    
+
     options[option_name] = {
         "points": points,
         "max": max_range,
@@ -260,12 +266,12 @@ def calculate_remaining_points():
             optionKey=key.replace('_',' - ')
             months_key = f"{key}_months"
             multiplier=1
-            if months_key in st.session_state and (options[optionKey]['extra']['PointsDeductionMultiple'] or '').lower()!='no':#options[optionKey]['extra']['Multiples']=='Yes' and 
+            if months_key in st.session_state and (options[optionKey]['extra']['PointsDeductionMultiple'] or '').lower()!='no':#options[optionKey]['extra']['Multiples']=='Yes' and
                 multiplier=len(st.session_state[months_key])
 
             deducted_points += (options[optionKey]['points']*multiplier)
             # Check if this option has associated months
-            
+
             #if :
             #    deducted_points += len(st.session_state[months_key]) * 3  # Deduct 3 points per selected month
     st.session_state.remaining_points = st.session_state.total_points - deducted_points
@@ -327,14 +333,14 @@ def init_session():
 
     if 'Submited' not in st.session_state:
         st.session_state.Submited = False
-    
+
     if 'uploadedfile' not in st.session_state:
         st.session_state['uploadedfile'] =""
         st.session_state['uploadedfiledetail'] ={ 'gid':'', 'gname':'','uname':''}
-    
+
     #if 'checkboxlabels' not in st.session_state:
     #    st.session_state.selected_options["checkboxlabels"]={}
-    
+
 init_session()
 # **New:** Calculate remaining points before rendering options
 calculate_remaining_points()
@@ -353,7 +359,7 @@ for section, section_options in event_sections.items():
             max_range = option_info['max']
             description = option_info["description"]
             uid = option_info['uid']
-            
+
             #if "WEBSITE:  2025 - Member Spotlight-Quarterly" in option_info['extra']['Computed Column']:
             #    ab=2
             # Clean and format the description into bullet points
@@ -384,7 +390,7 @@ for section, section_options in event_sections.items():
             if not (not option_info['extra']['Associated Subtitle']):
                 # Modify the label for Luncheon sponsors
                 checkbox_label += f" ({option_info['extra']['Associated Subtitle']})"
-            
+
             if max_range!="n/a":
                 checkbox_label += f", Max: {option_info['extra']['Default Max']} ({max_range} remaining)"
 
@@ -407,11 +413,11 @@ for section, section_options in event_sections.items():
                 max_months = option_info['max_month_selection']
                 available_months = option_info['computed_months_options']
                 handle_month_selection(unique_key, max_months, available_months)
-            
+
             if isSelectedOpt and option_info['extra']['Multiples']=='Yes':
                 available_months = option_info['extra']['Multiple Options'].split(',')
                 handle_month_selection2(unique_key,  available_months)
-            
+
             # Display the formatted description
             st.markdown(formatted_description)
 
@@ -454,10 +460,10 @@ if col1.button("Submit",disabled=(st.session_state.Submited)):
                 with open('uploads/'+fname, "wb") as binary_file:
                     binary_file.write(f.read())
             gfile.SetContentFile('uploads/'+fname)
-        else:           
+        else:
             with open('uploads/'+fname, "wb") as binary_file:
                 binary_file.write(bytes_data)
-            gfile.SetContentFile('uploads/'+fname)    
+            gfile.SetContentFile('uploads/'+fname)
         try:
             gfile.Upload()
         finally:
@@ -511,16 +517,16 @@ if col1.button("Submit",disabled=(st.session_state.Submited)):
 
     if not(len(reqfieldserror)==0  and st.session_state.remaining_points>-1):
         if len(reqfieldserror)>0:
-            st.warning("Form Not Submited: " +", ".join(reqfieldserror)+" are Required")        
+            st.warning("Form Not Submited: " +", ".join(reqfieldserror)+" are Required")
         elif st.session_state.remaining_points<0:
             st.warning("Form Not Submited: Remaining points incorrect, please check your selection")
     elif len(warnings)>0:
         st.warning(', '.join([str(k.replace('_',' - ')) for k in warnings])+" field Not filled properly.")
-    
+
     else:
         with st.spinner('Submitting...'):
             st.session_state.Submited =True
-        
+
             # Store data in 'raw info' sheet
             sheet.worksheet("raw info").append_row([
                 data["Name"], data["Company"], data["Email"], data["phoneNumber"], data["Total Points"],data["Contact Name"],
@@ -552,10 +558,10 @@ if col1.button("Submit",disabled=(st.session_state.Submited)):
             # Fetch email credentials from Streamlit secrets for security
             # sender_email = st.secrets["email"]["sender"]
             # app_password = st.secrets["email"]["app_password"]
-      
+
             recipient_email = email
             subject = "Form Submitted Successfully"
-            
+
             a=f"""
 UID: {submission_uid}
 Name: {contact_name}
@@ -575,10 +581,10 @@ Submission Date: {submission_date}
 
 
             worksheetSubmitted.append_row(submission_data)
-            
+
             datainfo=[(i,c,submission_data[i]) for i,c in enumerate(columns)]
             # Update Max value in Config sheet based on selected UIDs
-  
+
 
             for i, entry in enumerate(sections_data):
                 if entry['UID'] in selected_uids:
@@ -588,7 +594,7 @@ Submission Date: {submission_date}
                             worksheetConfig.update_cell(i + 2, worksheetConfig.find('Max').col, new_max)
                     except ValueError:
                         pass
-            
+
             pdfinfo = getEmail(datainfo, open("pdftemplate.tmp", "r").read().replace('{-1}',submission_date),False,True)
             output = io.BytesIO()
             pisa.CreatePDF(pdfinfo,debug=1,
@@ -602,7 +608,3 @@ Submission Date: {submission_date}
 
         st.session_state.Submited =False
         st.success("Form submitted successfully!")
-        
-        
-
-        
