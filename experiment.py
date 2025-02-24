@@ -38,7 +38,7 @@ if 'gdrivesetup' not in st.session_state:
         # Centering the logo using Streamlit columns
         col1, col2, col3 = st.columns([1, 2, 1])  # Adjust column width for centering
         with col2:
-            st.image("logo.jpg", width=150)  # Ensure logo loads properly
+            st.image("logo.jpg", width=250)  # Ensure logo loads properly
 
         # Use Markdown to center text
         st.markdown(
