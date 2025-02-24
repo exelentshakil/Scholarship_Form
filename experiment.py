@@ -28,7 +28,7 @@ pc=st.set_page_config(page_title="Sustaining Sponsor Benefits",page_icon= ":clip
 hide_footer_style = """
 <style>
 div#root div div > a {
-display:none;
+display:none !important;
 } 
 </style>
 """
