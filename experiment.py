@@ -24,15 +24,23 @@ import time
 
 pc=st.set_page_config(page_title="Sustaining Sponsor Benefits",page_icon= ":clipboard:")#,page_icon= "logo.jpg")
 
-# ---------------------- Hide Streamlit footer ----------------------------
-hide_footer_style = """
+# Inject CSS & JavaScript to remove Streamlit branding
+hide_st_footer = """
 <style>
-div#root div div > a {
-display:none !important;
-} 
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
 </style>
+
+<script>
+    setTimeout(function() {
+        var footer = window.parent.document.querySelector('footer');
+        if (footer) { footer.style.display = 'none'; }
+    }, 100);
+</script>
 """
-st.markdown(hide_footer_style, unsafe_allow_html=True)
+
+st.markdown(hide_st_footer, unsafe_allow_html=True)
 
 # Add current date and time to the data
 submission_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
