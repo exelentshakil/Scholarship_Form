@@ -37,9 +37,9 @@ if 'gdrivesetup' not in st.session_state:
     with loading_placeholder.container():
         # Centering the logo using Streamlit columns
         col1, col2, col3 = st.columns([1, 2, 1])  # Adjust column width for centering
-        with col2:
+        with col3:
             st.image("logo.jpg", width=150)  # Ensure logo loads properly
-        
+
         # Use Markdown to center text
         st.markdown(
             """
@@ -52,8 +52,11 @@ if 'gdrivesetup' not in st.session_state:
             unsafe_allow_html=True
         )
 
-        with st.spinner("Fetching sponsorship data, please wait..."):
-            time.sleep(1.5)  # Small delay to show the spinner effect
+        # Centering the spinner using columns
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col3:
+            with st.spinner("Fetching sponsorship data, please wait..."):
+                time.sleep(1.5)  # Small delay to show the spinner effect
 
 # Load the TOML configuration from Streamlit secrets
 secret_config = st.secrets["google_sheets"]
