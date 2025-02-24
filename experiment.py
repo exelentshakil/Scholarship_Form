@@ -30,6 +30,7 @@ hide_footer_style = """
 div#root div div > a {
 display:none;
 } 
+</style>
 """
 st.markdown(hide_footer_style, unsafe_allow_html=True)
 
