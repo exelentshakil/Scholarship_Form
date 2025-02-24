@@ -20,12 +20,34 @@ import os
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 from PIL import Image
+import time
 
 pc=st.set_page_config(page_title="Sustaining Sponsor Benefits",page_icon= ":clipboard:")#,page_icon= "logo.jpg")
 
 
 # Add current date and time to the data
 submission_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+# Placeholder for loading animation
+loading_placeholder = st.empty()
+
+# Show a professional loading screen **only when data is not cached**
+if 'gdrivesetup' not in st.session_state:
+    with loading_placeholder.container():
+        st.image("logo.jpg", width=150)  # Replace with your actual logo path
+        st.markdown(
+            """
+            <div style="text-align: center;">
+                <h2>🔄 Preparing Your Sponsorship Experience</h2>
+                <h4>Loading event sponsorship opportunities & exclusive benefits...</h4>
+                <p style="color: gray;">This won't take long – making sure everything is ready for you! ⏳</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        with st.spinner("Fetching sponsorship data, please wait..."):
+            time.sleep(1.5)  # Small delay to show the spinner effect
 
 # Load the TOML configuration from Streamlit secrets
 secret_config = st.secrets["google_sheets"]
@@ -67,28 +89,25 @@ def fetch_options(sheet, tab_name):
         st.stop()
 
 
-with st.spinner("Loading... Please wait ⏳"):
-    if all(map(lambda l: l in list(st.session_state.keys()), ['gdrivesetup'])):
-        scope, gauth, client, drive, sheet_id, sheet, options_data, sections_data, columns, worksheetSubmitted, worksheetConfig = st.session_state['gdrivesetup']
-    else:
-        # Google Sheets setup inside spinner
-        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-        gauth = GoogleAuth()
-        gauth.credentials = ServiceAccountCredentials.from_json_keyfile_dict(service_account_info, scope)
-        client = gspread.authorize(gauth.credentials)
-        sheet_id = secret_config["sheet_id"]
-        sheet = client.open_by_key(sheet_id)
-        drive = GoogleDrive(gauth)
-        
-        options_data, worksheetConfig = fetch_options(sheet, "Config")
-        sections_data, worksheetConfig = fetch_options(sheet, "Config")
-        worksheetSubmitted = sheet.worksheet("Submitted")
-        columns = sheet.worksheet("Submitted").row_values(1)
+if all( map(lambda l: l in list(st.session_state.keys()),['gdrivesetup']) ):
+    scope,gauth,client,drive,sheet_id,sheet,options_data,sections_data,columns,worksheetSubmitted,worksheetConfig = st.session_state['gdrivesetup']
+else:
+    # Google Sheets setup
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    gauth = GoogleAuth()
+    gauth.credentials = ServiceAccountCredentials.from_json_keyfile_dict(service_account_info, scope)
+    client = gspread.authorize(gauth.credentials)
+    sheet_id = secret_config["sheet_id"]#"16Ln8V-XTaSKDm1ycu5CNUkki-x2STgVvPHxSnOPKOwM"  # Replace with your actual Google Sheet ID
+    sheet = client.open_by_key(sheet_id)
+    drive = GoogleDrive(gauth)
+    options_data,worksheetConfig = fetch_options(sheet, "Config")
+    sections_data,worksheetConfig = fetch_options(sheet, "Config")
+    worksheetSubmitted= sheet.worksheet("Submitted")
+    columns = sheet.worksheet("Submitted").row_values(1)
+    st.session_state['gdrivesetup'] = [scope,gauth,client,drive,sheet_id,sheet,options_data,sections_data,columns,worksheetSubmitted,worksheetConfig]
 
-        # Cache setup in session state
-        st.session_state['gdrivesetup'] = [scope, gauth, client, drive, sheet_id, sheet, options_data, sections_data, columns, worksheetSubmitted, worksheetConfig]
-
-st.success("Page loaded successfully! 🎉")
+# **INSERT IT HERE**: Remove loading screen after setup is complete
+loading_placeholder.empty()
 
 def send_email(sender_email, sender_password, recipient_email, subject, body,file):
     try:
