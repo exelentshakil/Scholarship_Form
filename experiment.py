@@ -35,10 +35,15 @@ loading_placeholder = st.empty()
 # Show a professional loading screen **only when data is not cached**
 if 'gdrivesetup' not in st.session_state:
     with loading_placeholder.container():
+        # Centering the logo using Streamlit columns
+        col1, col2, col3 = st.columns([1, 2, 1])  # Adjust column width for centering
+        with col2:
+            st.image("logo.jpg", width=150)  # Ensure logo loads properly
+        
+        # Use Markdown to center text
         st.markdown(
             """
-            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;">
-                <img src="logo.jpg" width="150">
+            <div style="text-align: center;">
                 <h2>🔄 Preparing Your Sponsorship Experience</h2>
                 <h4>Loading event sponsorship opportunities & exclusive benefits...</h4>
                 <p style="color: gray;">This won't take long – making sure everything is ready for you! ⏳</p>
@@ -46,6 +51,7 @@ if 'gdrivesetup' not in st.session_state:
             """,
             unsafe_allow_html=True
         )
+
         with st.spinner("Fetching sponsorship data, please wait..."):
             time.sleep(1.5)  # Small delay to show the spinner effect
 
