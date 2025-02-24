@@ -27,7 +27,9 @@ pc=st.set_page_config(page_title="Sustaining Sponsor Benefits",page_icon= ":clip
 # ---------------------- Hide Streamlit footer ----------------------------
 hide_footer_style = """
 <style>
-.reportview-container .main footer {visibility: hidden;}    
+div#root div div > a {
+display:none;
+} 
 """
 st.markdown(hide_footer_style, unsafe_allow_html=True)
 
