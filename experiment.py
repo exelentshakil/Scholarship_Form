@@ -14,6 +14,9 @@ from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 from PIL import Image
 
+import logging
+
+
 # Set Streamlit Page Config
 st.set_page_config(page_title="Sustaining Sponsor Benefits", page_icon=":clipboard:")
 
@@ -164,3 +167,83 @@ if st.button("Submit"):
 
             send_email(email, "Form Submitted", "Your submission was successful!", pdf_data)
             st.download_button('Download PDF', pdf_data, file_name='Sustaining_Sponsor_Benefits.pdf', mime='application/pdf')
+
+
+# Configure logging
+LOG_FILENAME = "streamlit_app.log"
+logging.basicConfig(
+    filename=LOG_FILENAME,
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    filemode="w",  # Overwrites logs each run; change to "a" to append
+)
+
+logging.info("Streamlit App Started.")
+
+# Function to fetch data from Google Sheets
+def fetch_options(sheet, tab_name):
+    try:
+        logging.info(f"Fetching data from Google Sheet: {tab_name}")
+        worksheet = sheet.worksheet(tab_name)
+        data = worksheet.get_all_records()
+
+        if not data:
+            logging.warning(f"Sheet {tab_name} is empty!")
+
+        logging.info(f"Successfully fetched {len(data)} records from {tab_name}")
+        return data, worksheet
+    except gspread.exceptions.WorksheetNotFound as e:
+        logging.error(f"Worksheet {tab_name} not found: {e}")
+        st.error(f"Worksheet {tab_name} not found.")
+        st.stop()
+    except Exception as e:
+        logging.error(f"Unexpected error fetching {tab_name}: {e}")
+        st.error(f"Error fetching data from {tab_name}: {e}")
+        st.stop()
+
+# Session State Debugging
+logging.info("Checking session state variables...")
+if "gdrivesetup" in st.session_state:
+    logging.info("Session state found, using cached setup.")
+    scope, gauth, client, drive, sheet_id, sheet, options_data, sections_data, columns, worksheetSubmitted, worksheetConfig = st.session_state["gdrivesetup"]
+else:
+    logging.info("No session state found, initializing Google Sheets setup.")
+
+    # Google Sheets Setup
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    gauth = GoogleAuth()
+    gauth.credentials = ServiceAccountCredentials.from_json_keyfile_dict(service_account_info, scope)
+    client = gspread.authorize(gauth.credentials)
+
+    sheet_id = secret_config["sheet_id"]
+    sheet = client.open_by_key(sheet_id)
+    drive = GoogleDrive(gauth)
+
+    # Fetch Data with Logging
+    options_data, worksheetConfig = fetch_options(sheet, "Config")
+    sections_data, worksheetConfig = fetch_options(sheet, "Config")
+
+    # Log the number of entries fetched
+    logging.info(f"Options data fetched: {len(options_data)} records")
+    logging.info(f"Sections data fetched: {len(sections_data)} records")
+
+    worksheetSubmitted = sheet.worksheet("Submitted")
+    columns = sheet.worksheet("Submitted").row_values(1)
+    logging.info(f"Column headers retrieved: {columns}")
+
+    st.session_state["gdrivesetup"] = [scope, gauth, client, drive, sheet_id, sheet, options_data, sections_data, columns, worksheetSubmitted, worksheetConfig]
+
+# Display logs in Streamlit UI (for debugging)
+if st.button("Show Logs"):
+    with open(LOG_FILENAME, "r") as log_file:
+        st.text(log_file.read())
+
+# Debugging Google Sheets Data
+if not options_data:
+    logging.error("options_data is empty!")
+    st.error("Options data is empty. Check the Google Sheet.")
+if not sections_data:
+    logging.error("sections_data is empty!")
+    st.error("Sections data is empty. Check the Google Sheet.")
+
+logging.info("Google Sheets data successfully loaded into session state.")
