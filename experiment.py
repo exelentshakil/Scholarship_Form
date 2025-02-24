@@ -35,14 +35,14 @@ loading_placeholder = st.empty()
 # Show a professional loading screen **only when data is not cached**
 if 'gdrivesetup' not in st.session_state:
     with loading_placeholder.container():
-    st.markdown(
-        """
-        <div style="display: flex; justify-content: center;">
-            <img src="logo.jpg" width="150">
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+        st.markdown(
+            """
+            <div style="display: flex; justify-content: center;">
+                <img src="logo.jpg" width="150">
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
         st.markdown(
             """
             <div style="text-align: center;">
