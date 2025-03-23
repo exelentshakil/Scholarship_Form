@@ -154,7 +154,7 @@ def send_email(sender_email, sender_password, recipient_email, subject, body,fil
             message.attach(part)
 
             # Establish a secure session with Gmail's outgoing SMTP server
-            with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            with smtplib.SMTP('smtp.office365.com', 587) as server:
                 server.starttls()  # Secure the connection
                 server.login(sender_email, sender_password)  # Log in with app password
                 text = message.as_string()
